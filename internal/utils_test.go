@@ -9,7 +9,7 @@ import (
 
 func TestDownload(t *testing.T) {
 	client := NewTestClient(func(req *http.Request) *http.Response {
-		equals(t, req.URL.String(), "http://example.com/test")
+		Equals(t, req.URL.String(), "http://example.com/test")
 
 		return &http.Response{
 			StatusCode: 200,
@@ -20,7 +20,7 @@ func TestDownload(t *testing.T) {
 
 	data, err := Download("http://example.com/test", client)
 
-	ok(t, err)
+	Ok(t, err)
 
-	equals(t, []byte("data"), data)
+	Equals(t, []byte("data"), data)
 }

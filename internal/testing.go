@@ -18,13 +18,13 @@ func NewTestClient(fn RoundTripFunc) *http.Client {
 	}
 }
 
-func ok(t *testing.T, err error) {
+func Ok(t *testing.T, err error) {
 	if err != nil {
 		t.Fatalf("expected not error got: %v", err)
 	}
 }
 
-func equals(t *testing.T, expected, actual interface{}) {
+func Equals(t *testing.T, expected, actual interface{}) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected %v got %v", expected, actual)
 	}
