@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"mcmanager/internal/download"
+	"mcmanager/internal/mcmanager"
 	"net/http"
+	"path/filepath"
 	"time"
 )
 
@@ -189,6 +191,16 @@ func GetModPack(id int, client *http.Client) (*ModPack, error) {
 	modpack := data.(ModPack)
 
 	return &modpack, nil
+}
+
+func (m *ModPack) GetInstallPath(config *mcmanager.Config) string {
+	name := config.Name
+
+	if name == "" {
+		name = m.Slug
+	}
+
+	return filepath.Join(config.InstallPath, name)
 }
 
 func (m *ModPack) GetVersion(versionID int, client *http.Client) (*ModPackVersion, error) {

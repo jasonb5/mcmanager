@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 )
 
 func Download(url string, client *http.Client) ([]byte, error) {
@@ -41,21 +40,17 @@ func Download(url string, client *http.Client) ([]byte, error) {
 	return data, nil
 }
 
-func DownloadFile(url, path string, client *http.Client) (string, error) {
-	filename := filepath.Base(url)
-
+func DownloadFile(url, path string, client *http.Client) error {
 	data, err := Download(url, client)
 
 	if err != nil {
-		return "", fmt.Errorf("error downloading %v: %v", url, err)
+		return fmt.Errorf("error downloading %v: %v", url, err)
 	}
 
-	downloadPath := filepath.Join(path, filename)
-
-	outputFile, err := os.Create(downloadPath)
+	outputFile, err := os.Create(path)
 
 	if err != nil {
-		return "", fmt.Errorf("error creating output file %v: %v", downloadPath, err)
+		return fmt.Errorf("error creating output file %v: %v", path, err)
 	}
 
 	defer outputFile.Close()
@@ -63,23 +58,21 @@ func DownloadFile(url, path string, client *http.Client) (string, error) {
 	_, err = outputFile.Write(data)
 
 	if err != nil {
-		return "", fmt.Errorf("error writing data to %v: %v", downloadPath, err)
+		return fmt.Errorf("error writing data to %v: %v", path, err)
 	}
 
-	log.Printf("Wrote data from %v -> %v", url, downloadPath)
+	log.Printf("Wrote data from %v -> %v", url, path)
 
-	return downloadPath, nil
+	return nil
 }
 
-func DownloadExtract(url, path string, client *http.Client) error {
-	downloadPath, err := DownloadFile(url, path, client)
-
-	if err != nil {
+func DownloadExtract(url, asset, path string, client *http.Client) error {
+	if err := DownloadFile(url, asset, client); err != nil {
 		return fmt.Errorf("error downloading %v: %v", url, err)
 	}
 
-	if err := Unzip(downloadPath, path); err != nil {
-		return fmt.Errorf("error unziping %v: %v", downloadPath, err)
+	if err := Unzip(asset, path); err != nil {
+		return fmt.Errorf("error unziping %v: %v", path, err)
 	}
 
 	return nil

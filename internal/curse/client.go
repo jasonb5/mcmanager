@@ -95,25 +95,21 @@ func WriteEULA(path string) error {
 	return nil
 }
 
-func InstallServer(modpack *ModPack, version *ModPackVersion, config *mcmanager.Config, client *http.Client) error {
-	name := config.Name
+func InstallModPack(version *ModPackVersion, installPath string, config *mcmanager.Config, client *http.Client) error {
+	filename := filepath.Base(version.DownloadURL)
 
-	if name == "" {
-		name = modpack.Slug
+	assetPath := filepath.Join(installPath, filename)
+
+	if _, err := os.Stat(assetPath); os.IsNotExist(err) {
+		if err := download.DownloadExtract(version.DownloadURL, assetPath, installPath, client); err != nil {
+			return fmt.Errorf("error downloading and extracting file %v: %v", version.DownloadURL, err)
+		}
 	}
 
-	installPath := filepath.Join(config.InstallPath, name)
+	return nil
+}
 
-	log.Printf("Installing into %v", installPath)
-
-	if err := os.MkdirAll(installPath, os.ModePerm); err != nil {
-		return fmt.Errorf("error creating directory %v: %v", installPath, err)
-	}
-
-	if err := download.DownloadExtract(version.DownloadURL, installPath, client); err != nil {
-		return fmt.Errorf("error downloading and extracting file %v: %v", version.DownloadURL, err)
-	}
-
+func InstallModPackServer(modpack *ModPack, version *ModPackVersion, installPath string, config *mcmanager.Config, client *http.Client) error {
 	if version.ServerPackFileID == 0 {
 		return fmt.Errorf("error %s does not have a server pack", version.DisplayName)
 	}
@@ -126,8 +122,34 @@ func InstallServer(modpack *ModPack, version *ModPackVersion, config *mcmanager.
 		return fmt.Errorf("error getting download url for %v: %v", serverPackDownloadURL, err)
 	}
 
-	if err := download.DownloadExtract(string(serverPackURL), installPath, client); err != nil {
-		return fmt.Errorf("error downloading and extracting server files %v: %v", serverPackURL, err)
+	filename := filepath.Base(string(serverPackURL))
+
+	assetPath := filepath.Join(installPath, filename)
+
+	if _, err := os.Stat(assetPath); os.IsNotExist(err) {
+		if err := download.DownloadExtract(string(serverPackURL), assetPath, installPath, client); err != nil {
+			return fmt.Errorf("error downloading and extracting server files %v: %v", serverPackURL, err)
+		}
+	}
+
+	return nil
+}
+
+func InstallServer(modpack *ModPack, version *ModPackVersion, config *mcmanager.Config, client *http.Client) error {
+	installPath := modpack.GetInstallPath(config)
+
+	log.Printf("Installing into %v", installPath)
+
+	if err := os.MkdirAll(installPath, os.ModePerm); err != nil {
+		return fmt.Errorf("error creating directory %v: %v", installPath, err)
+	}
+
+	if err := InstallModPack(version, installPath, config, client); err != nil {
+		return fmt.Errorf("error installing modpack: %v", err)
+	}
+
+	if err := InstallModPackServer(modpack, version, installPath, config, client); err != nil {
+		return fmt.Errorf("error installing modpack server: %v", err)
 	}
 
 	if err := WriteEULA(installPath); err != nil {
