@@ -1,6 +1,12 @@
 package curse
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"mcmanager/internal/download"
+	"net/http"
+	"time"
+)
 
 type ModPack struct {
 	ID      int    `json:"id"`
@@ -14,7 +20,7 @@ type ModPack struct {
 		ProjectTitleTitle interface{} `json:"projectTitleTitle"`
 		UserID            int         `json:"userId"`
 		TwitchID          int         `json:"twitchId"`
-	} `json:"authors"`
+	} `json:"authors,omitempty"`
 	Attachments []struct {
 		ID           int    `json:"id"`
 		ProjectID    int    `json:"projectId"`
@@ -24,14 +30,14 @@ type ModPack struct {
 		Title        string `json:"title"`
 		URL          string `json:"url"`
 		Status       int    `json:"status"`
-	} `json:"attachments"`
+	} `json:"attachments,omitempty"`
 	IssueTrackerURL string  `json:"issueTrackerUrl,omitempty"`
 	WikiURL         string  `json:"wikiUrl,omitempty"`
-	WebsiteURL      string  `json:"websiteUrl"`
-	GameID          int     `json:"gameId"`
-	Summary         string  `json:"summary"`
-	DefaultFileID   int     `json:"defaultFileId"`
-	DownloadCount   float64 `json:"downloadCount"`
+	WebsiteURL      string  `json:"websiteUrl,omitempty"`
+	GameID          int     `json:"gameId,omitempty"`
+	Summary         string  `json:"summary,omitempty"`
+	DefaultFileID   int     `json:"defaultFileId,omitempty"`
+	DownloadCount   float64 `json:"downloadCount,omitempty"`
 	LatestFiles     []struct {
 		ID              int           `json:"id"`
 		DisplayName     string        `json:"displayName"`
@@ -86,7 +92,7 @@ type ModPack struct {
 			Value     string `json:"value"`
 		} `json:"hashes"`
 		DownloadCount int `json:"downloadCount"`
-	} `json:"latestFiles"`
+	} `json:"latestFiles,omitempty"`
 	Categories []struct {
 		CategoryID   int       `json:"categoryId"`
 		Name         string    `json:"name"`
@@ -99,9 +105,9 @@ type ModPack struct {
 		GameID       int       `json:"gameId"`
 		Slug         string    `json:"slug"`
 		DateModified time.Time `json:"dateModified"`
-	} `json:"categories"`
-	Status            int `json:"status"`
-	PrimaryCategoryID int `json:"primaryCategoryId"`
+	} `json:"categories,omitempty"`
+	Status            int `json:"status,omitempty"`
+	PrimaryCategoryID int `json:"primaryCategoryId,omitempty"`
 	CategorySection   struct {
 		ID                      int         `json:"id"`
 		GameID                  int         `json:"gameId"`
@@ -111,7 +117,7 @@ type ModPack struct {
 		InitialInclusionPattern string      `json:"initialInclusionPattern"`
 		ExtraIncludePattern     interface{} `json:"extraIncludePattern"`
 		GameCategoryID          int         `json:"gameCategoryId"`
-	} `json:"categorySection"`
+	} `json:"categorySection,omitempty"`
 	Slug                   string `json:"slug"`
 	GameVersionLatestFiles []struct {
 		GameVersion       string      `json:"gameVersion"`
@@ -120,19 +126,111 @@ type ModPack struct {
 		FileType          int         `json:"fileType"`
 		GameVersionFlavor interface{} `json:"gameVersionFlavor"`
 		GameVersionTypeID int         `json:"gameVersionTypeId"`
-	} `json:"gameVersionLatestFiles"`
-	IsFeatured         bool      `json:"isFeatured"`
-	PopularityScore    float64   `json:"popularityScore"`
-	GamePopularityRank int       `json:"gamePopularityRank"`
-	PrimaryLanguage    string    `json:"primaryLanguage"`
-	GameSlug           string    `json:"gameSlug"`
-	GameName           string    `json:"gameName"`
-	PortalName         string    `json:"portalName"`
-	DateModified       time.Time `json:"dateModified"`
-	DateCreated        time.Time `json:"dateCreated"`
-	DateReleased       time.Time `json:"dateReleased"`
-	IsAvailable        bool      `json:"isAvailable"`
-	IsExperiemental    bool      `json:"isExperiemental"`
+	} `json:"gameVersionLatestFiles,omitempty"`
+	IsFeatured         bool      `json:"isFeatured,omitempty"`
+	PopularityScore    float64   `json:"popularityScore,omitempty"`
+	GamePopularityRank int       `json:"gamePopularityRank,omitempty"`
+	PrimaryLanguage    string    `json:"primaryLanguage,omitempty"`
+	GameSlug           string    `json:"gameSlug,omitempty"`
+	GameName           string    `json:"gameName,omitempty"`
+	PortalName         string    `json:"portalName,omitempty"`
+	DateModified       time.Time `json:"dateModified,omitempty"`
+	DateCreated        time.Time `json:"dateCreated,omitempty"`
+	DateReleased       time.Time `json:"dateReleased,omitempty"`
+	IsAvailable        bool      `json:"isAvailable,omitempty"`
+	IsExperiemental    bool      `json:"isExperiemental,omitempty"`
 	SourceURL          string    `json:"sourceUrl,omitempty"`
 	ModLoaders         []string  `json:"modLoaders,omitempty"`
+}
+
+type ModPackVersion struct {
+	ID              int           `json:"id"`
+	DisplayName     string        `json:"displayName"`
+	FileName        string        `json:"fileName"`
+	FileDate        time.Time     `json:"fileDate"`
+	FileLength      int           `json:"fileLength"`
+	ReleaseType     int           `json:"releaseType"`
+	FileStatus      int           `json:"fileStatus"`
+	DownloadURL     string        `json:"downloadUrl"`
+	IsAlternate     bool          `json:"isAlternate"`
+	AlternateFileID int           `json:"alternateFileId"`
+	Dependencies    []interface{} `json:"dependencies"`
+	IsAvailable     bool          `json:"isAvailable"`
+	Modules         []struct {
+		Foldername  string `json:"foldername"`
+		Fingerprint int    `json:"fingerprint"`
+	} `json:"modules"`
+	PackageFingerprint      int         `json:"packageFingerprint"`
+	GameVersion             []string    `json:"gameVersion"`
+	InstallMetadata         interface{} `json:"installMetadata"`
+	ServerPackFileID        int         `json:"serverPackFileId"`
+	HasInstallScript        bool        `json:"hasInstallScript"`
+	GameVersionDateReleased time.Time   `json:"gameVersionDateReleased"`
+	GameVersionFlavor       interface{} `json:"gameVersionFlavor"`
+}
+
+func GetModPack(id int, client *http.Client) (*ModPack, error) {
+	url := fmt.Sprintf(MODPACK_URL, BASE_URL, id)
+
+	data, err := download.DownloadJSON(url, func(b []byte) (interface{}, error) {
+		var pack ModPack
+
+		if err := json.Unmarshal(b, &pack); err != nil {
+			return nil, fmt.Errorf("error decoding json: %v", err)
+		}
+
+		return pack, nil
+	}, client)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting modpack: %v", err)
+	}
+
+	modpack := data.(ModPack)
+
+	return &modpack, nil
+}
+
+func (m *ModPack) GetVersion(versionID int, client *http.Client) (*ModPackVersion, error) {
+	versions, err := m.GetVersions()
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting versions: %v", err)
+	}
+
+	var version *ModPackVersion
+
+	for _, x := range versions {
+		if x.ID == versionID {
+			version = &x
+
+			break
+		}
+	}
+
+	if version == nil {
+		return nil, fmt.Errorf("error finding match for version %v", versionID)
+	}
+
+	return version, nil
+}
+
+func (m *ModPack) GetVersions() ([]ModPackVersion, error) {
+	url := fmt.Sprintf(VERSIONS_URL, BASE_URL, m.ID)
+
+	data, err := download.DownloadJSON(url, func(b []byte) (interface{}, error) {
+		var versions []ModPackVersion
+
+		if err := json.Unmarshal(b, &versions); err != nil {
+			return nil, fmt.Errorf("error decoding modpack versions: %v", err)
+		}
+
+		return versions, nil
+	}, nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting modpack versions: %v", err)
+	}
+
+	return data.([]ModPackVersion), nil
 }
