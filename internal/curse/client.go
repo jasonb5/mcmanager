@@ -77,6 +77,24 @@ func Search(c *SearchConfig, client *http.Client) ([]ModPack, error) {
 	return data.([]ModPack), nil
 }
 
+func WriteEULA(path string) error {
+	eulaPath := filepath.Join(path, "eula.txt")
+
+	if _, err := os.Stat(eulaPath); os.IsNotExist(err) {
+		eulaFile, err := os.Create(eulaPath)
+
+		if err != nil {
+			return fmt.Errorf("error creating eula file: %v", err)
+		}
+
+		defer eulaFile.Close()
+
+		eulaFile.WriteString("eula=true")
+	}
+
+	return nil
+}
+
 func InstallServer(modpack *ModPack, version *ModPackVersion, config *mcmanager.Config, client *http.Client) error {
 	if err := download.DownloadExtract(version.DownloadURL, config.InstallPath, client); err != nil {
 		return fmt.Errorf("error downloading and extracting file %v: %v", version.DownloadURL, err)
@@ -98,10 +116,18 @@ func InstallServer(modpack *ModPack, version *ModPackVersion, config *mcmanager.
 		return fmt.Errorf("error downloading and extracting server files %v: %v", serverPackURL, err)
 	}
 
+	if err := WriteEULA(config.InstallPath); err != nil {
+		return fmt.Errorf("error writing eula: %v", err)
+	}
+
 	serverSetupConfig := filepath.Join(config.InstallPath, "server-setup-config.yaml")
 
 	if _, err := os.Stat(serverSetupConfig); err == nil {
 		startServer := filepath.Join(config.InstallPath, "startserver.sh")
+
+		if err := os.Chmod(startServer, 0700); err != nil {
+			return fmt.Errorf("error making file executable: %v", err)
+		}
 
 		if err := runner.Run(startServer); err != nil {
 			return fmt.Errorf("error running server starter: %v", err)
