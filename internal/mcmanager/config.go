@@ -11,9 +11,7 @@ type Config struct {
 }
 
 func NewConfig(name, path string) *Config {
-	installPath := filepath.Join(path, name)
-
-	installPath, err := filepath.Abs(installPath)
+	installPath, err := filepath.Abs(path)
 
 	if err != nil {
 		log.Fatalf("error getting absolute path for %v: %v", installPath, err)

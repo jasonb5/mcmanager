@@ -96,7 +96,21 @@ func WriteEULA(path string) error {
 }
 
 func InstallServer(modpack *ModPack, version *ModPackVersion, config *mcmanager.Config, client *http.Client) error {
-	if err := download.DownloadExtract(version.DownloadURL, config.InstallPath, client); err != nil {
+	name := config.Name
+
+	if name == "" {
+		name = modpack.Slug
+	}
+
+	installPath := filepath.Join(config.InstallPath, name)
+
+	log.Printf("Installing into %v", installPath)
+
+	if err := os.MkdirAll(installPath, os.ModePerm); err != nil {
+		return fmt.Errorf("error creating directory %v: %v", installPath, err)
+	}
+
+	if err := download.DownloadExtract(version.DownloadURL, installPath, client); err != nil {
 		return fmt.Errorf("error downloading and extracting file %v: %v", version.DownloadURL, err)
 	}
 
@@ -112,18 +126,18 @@ func InstallServer(modpack *ModPack, version *ModPackVersion, config *mcmanager.
 		return fmt.Errorf("error getting download url for %v: %v", serverPackDownloadURL, err)
 	}
 
-	if err := download.DownloadExtract(string(serverPackURL), config.InstallPath, client); err != nil {
+	if err := download.DownloadExtract(string(serverPackURL), installPath, client); err != nil {
 		return fmt.Errorf("error downloading and extracting server files %v: %v", serverPackURL, err)
 	}
 
-	if err := WriteEULA(config.InstallPath); err != nil {
+	if err := WriteEULA(installPath); err != nil {
 		return fmt.Errorf("error writing eula: %v", err)
 	}
 
-	serverSetupConfig := filepath.Join(config.InstallPath, "server-setup-config.yaml")
+	serverSetupConfig := filepath.Join(installPath, "server-setup-config.yaml")
 
 	if _, err := os.Stat(serverSetupConfig); err == nil {
-		startServer := filepath.Join(config.InstallPath, "startserver.sh")
+		startServer := filepath.Join(installPath, "startserver.sh")
 
 		if err := os.Chmod(startServer, 0700); err != nil {
 			return fmt.Errorf("error making file executable: %v", err)
