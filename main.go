@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"mcmanager/internal/curse"
+	"mcmanager/internal/ftb"
 	"os"
 	"path/filepath"
 
@@ -125,6 +126,40 @@ func main() {
 							return nil
 						},
 					},
+				},
+			},
+			{
+				Name:  "ftb",
+				Usage: "Install a ftb modpack",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "term",
+						Usage:    "Term to search",
+						Required: true,
+						EnvVars:  []string{"MCM_TERM"},
+					},
+				},
+				Action: func(c *cli.Context) error {
+					term := c.String("term")
+					installPath := c.String("installPath")
+
+					installPath, err := filepath.Abs(installPath)
+
+					if err != nil {
+						return err
+					}
+
+					dataPath, err := ftb.Install(term, installPath)
+
+					if err != nil {
+						return err
+					}
+
+					if err := ftb.Run(dataPath); err != nil {
+						return err
+					}
+
+					return nil
 				},
 			},
 		},
